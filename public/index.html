@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPS Tracker — Live Dashboard</title>
+  <meta name="description" content="Real-time GPS tracking dashboard for ESP32 with live map and location history">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-card: rgba(20, 20, 40, 0.85);
+      --bg-card-hover: rgba(30, 30, 55, 0.9);
+      --border-card: rgba(100, 120, 255, 0.15);
+      --border-glow: rgba(100, 120, 255, 0.3);
+      --text-primary: #e8e8f0;
+      --text-secondary: #8888aa;
+      --text-muted: #555570;
+      --accent-blue: #6478ff;
+      --accent-cyan: #00d4ff;
+      --accent-green: #00e676;
+      --accent-orange: #ff9100;
+      --accent-red: #ff4757;
+      --accent-purple: #b388ff;
+      --gradient-1: linear-gradient(135deg, #6478ff 0%, #00d4ff 100%);
+      --gradient-2: linear-gradient(135deg, #00e676 0%, #00d4ff 100%);
+      --shadow-glow: 0 0 30px rgba(100, 120, 255, 0.1);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ---- Layout ---- */
+    .app {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-card);
+      backdrop-filter: blur(20px);
+      z-index: 1000;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .header h1 span {
+      font-weight: 300;
+      color: var(--text-secondary);
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      transition: background 0.3s;
+    }
+
+    .status-dot.connected {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px rgba(0, 230, 118, 0.5);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      background: var(--bg-card);
+      border-right: 1px solid var(--border-card);
+      backdrop-filter: blur(20px);
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 4px;
+    }
+
+    /* ---- Cards ---- */
+    .card {
+      background: rgba(25, 25, 50, 0.6);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 18px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .card-icon.blue   { background: rgba(100, 120, 255, 0.15); }
+    .card-icon.cyan   { background: rgba(0, 212, 255, 0.15); }
+    .card-icon.green  { background: rgba(0, 230, 118, 0.15); }
+    .card-icon.orange { background: rgba(255, 145, 0, 0.15); }
+    .card-icon.purple { background: rgba(179, 136, 255, 0.15); }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-secondary);
+    }
+
+    /* ---- Stat Grid ---- */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .stat-value.blue   { color: var(--accent-blue); }
+    .stat-value.cyan   { color: var(--accent-cyan); }
+    .stat-value.green  { color: var(--accent-green); }
+    .stat-value.orange { color: var(--accent-orange); }
+    .stat-value.purple { color: var(--accent-purple); }
+
+    .stat-unit {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+
+    /* ---- Coordinates ---- */
+    .coord-display {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .coord-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(15, 15, 30, 0.5);
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .coord-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .coord-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+    }
+
+    /* ---- Activity Log ---- */
+    .activity-log {
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .activity-log::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .activity-log::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 3px;
+    }
+
+    .log-entry {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: rgba(15, 15, 30, 0.4);
+      border-radius: 6px;
+      font-size: 12px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-10px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .log-time {
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .log-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ---- Map ---- */
+    .map-container {
+      position: relative;
+      overflow: hidden;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Leaflet overrides for dark theme */
+    .leaflet-control-zoom a {
+      background: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border-card) !important;
+    }
+
+    .leaflet-control-zoom a:hover {
+      background: var(--bg-card-hover) !important;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(15, 15, 30, 0.8) !important;
+      color: var(--text-muted) !important;
+      font-size: 10px !important;
+    }
+
+    .leaflet-control-attribution a {
+      color: var(--text-secondary) !important;
+    }
+
+    /* Map overlay controls */
+    .map-controls {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 1000;
+      display: flex;
+      gap: 8px;
+    }
+
+    .map-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.2s ease;
+    }
+
+    .map-btn:hover {
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .map-btn.active {
+      border-color: var(--accent-blue);
+      background: rgba(100, 120, 255, 0.1);
+    }
+
+    /* ---- No Data State ---- */
+    .no-data {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+
+    .no-data-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .no-data-text {
+      font-size: 14px;
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 768px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 50vh 1fr;
+      }
+
+      .sidebar {
+        order: 3;
+        max-height: none;
+        overflow-y: auto;
+      }
+
+      .map-container {
+        order: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Header -->
+    <header class="header" id="header">
+      <div class="header-left">
+        <div class="logo">🛰️</div>
+        <h1>GPS Tracker <span>Dashboard</span></h1>
+      </div>
+      <div class="connection-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Location Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon blue">📍</div>
+          <div class="card-title">Current Position</div>
+        </div>
+        <div class="coord-display">
+          <div class="coord-row">
+            <span class="coord-label">Latitude</span>
+            <span class="coord-value" id="valLat">—</span>
+          </div>
+          <div class="coord-row">
+            <span class="coord-label">Longitude</span>
+            <span class="coord-value" id="valLng">—</span>
+          </div>
+          <div class="coord-row">
+            <span class="coord-label">Altitude</span>
+            <span class="coord-value" id="valAlt">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Speed & Satellites Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon green">📊</div>
+          <div class="card-title">Telemetry</div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat">
+            <span class="stat-label">Speed</span>
+            <div>
+              <span class="stat-value green" id="valSpeed">—</span>
+              <span class="stat-unit">km/h</span>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Satellites</span>
+            <div>
+              <span class="stat-value cyan" id="valSats">—</span>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Source</span>
+            <div>
+              <span class="stat-value purple" id="valSource" style="font-size:14px;">—</span>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Last Update</span>
+            <div>
+              <span class="stat-value orange" id="valTime" style="font-size:12px;">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon orange">📈</div>
+          <div class="card-title">Statistics</div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat">
+            <span class="stat-label">Total Points</span>
+            <div>
+              <span class="stat-value blue" id="valTotal">0</span>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Max Speed</span>
+            <div>
+              <span class="stat-value green" id="valMaxSpeed">—</span>
+              <span class="stat-unit">km/h</span>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Avg Speed</span>
+            <div>
+              <span class="stat-value cyan" id="valAvgSpeed">—</span>
+              <span class="stat-unit">km/h</span>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Tracking Since</span>
+            <div>
+              <span class="stat-value orange" id="valSince" style="font-size:12px;">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Log Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon purple">📋</div>
+          <div class="card-title">Activity Log</div>
+        </div>
+        <div class="activity-log" id="activityLog">
+          <div class="no-data">
+            <div class="no-data-icon">📡</div>
+            <div class="no-data-text">Waiting for GPS data...</div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Map -->
+    <div class="map-container">
+      <div id="map"></div>
+      <div class="map-controls">
+        <button class="map-btn active" id="btnFollow" onclick="toggleFollow()">
+          🎯 Follow
+        </button>
+        <button class="map-btn" id="btnTrail" onclick="toggleTrail()">
+          📏 Trail
+        </button>
+        <button class="map-btn" id="btnClear" onclick="clearTrail()">
+          🗑️ Clear
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // ============================================
+    // CONFIG
+    // ============================================
+    const API_KEY = 'changeme';
+    let followMode = true;
+    let showTrail = true;
+
+    // ============================================
+    // MAP SETUP
+    // ============================================
+    const map = L.map('map', {
+      zoomControl: true,
+      attributionControl: true
+    }).setView([52.3676, 4.9041], 15);
+
+    // Dark tile layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(map);
+
+    // Custom marker icon
+    const markerIcon = L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="
+        width: 20px; height: 20px;
+        background: radial-gradient(circle, #00d4ff 30%, rgba(0, 212, 255, 0.3) 70%);
+        border: 2px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.6), 0 0 30px rgba(0, 212, 255, 0.3);
+        animation: markerPulse 2s infinite;
+      "></div>
+      <style>
+        @keyframes markerPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.2); }
+        }
+      </style>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+
+    let currentMarker = null;
+    let trailLine = null;
+    const trailCoords = [];
+
+    // Initialize trail polyline
+    trailLine = L.polyline([], {
+      color: '#6478ff',
+      weight: 3,
+      opacity: 0.7,
+      dashArray: null,
+      smoothFactor: 1
+    }).addTo(map);
+
+    // ============================================
+    // UI UPDATES
+    // ============================================
+    function updatePosition(data) {
+      const { lat, lng, alt, speed, satellites, timestamp, source } = data;
+
+      // Update sidebar values
+      document.getElementById('valLat').textContent = lat.toFixed(6) + '°';
+      document.getElementById('valLng').textContent = lng.toFixed(6) + '°';
+      document.getElementById('valAlt').textContent = (alt || 0).toFixed(1) + ' m';
+      document.getElementById('valSpeed').textContent = (speed || 0).toFixed(1);
+      document.getElementById('valSats').textContent = satellites || '—';
+      document.getElementById('valSource').textContent = source || 'unknown';
+
+      if (timestamp) {
+        const d = new Date(timestamp);
+        document.getElementById('valTime').textContent = d.toLocaleTimeString();
+      }
+
+      // Update marker
+      const latlng = [lat, lng];
+
+      if (!currentMarker) {
+        currentMarker = L.marker(latlng, { icon: markerIcon }).addTo(map);
+        map.setView(latlng, 16);
+      } else {
+        currentMarker.setLatLng(latlng);
+      }
+
+      if (followMode) {
+        map.panTo(latlng);
+      }
+
+      // Update trail
+      if (showTrail) {
+        trailCoords.push(latlng);
+        trailLine.setLatLngs(trailCoords);
+      }
+
+      // Add log entry
+      addLogEntry(lat, lng, speed);
+    }
+
+    function updateStats(stats) {
+      if (!stats) return;
+      document.getElementById('valTotal').textContent = stats.total || 0;
+      document.getElementById('valMaxSpeed').textContent =
+        stats.max_speed != null ? stats.max_speed.toFixed(1) : '—';
+      document.getElementById('valAvgSpeed').textContent =
+        stats.avg_speed != null ? stats.avg_speed.toFixed(1) : '—';
+
+      if (stats.first_received) {
+        const d = new Date(stats.first_received);
+        document.getElementById('valSince').textContent = d.toLocaleDateString();
+      }
+    }
+
+    let logCount = 0;
+    function addLogEntry(lat, lng, speed) {
+      const log = document.getElementById('activityLog');
+
+      // Remove "no data" message on first entry
+      if (logCount === 0) {
+        log.innerHTML = '';
+      }
+
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+
+      const now = new Date();
+      const time = now.toLocaleTimeString();
+
+      entry.innerHTML = `
+        <div class="log-dot"></div>
+        <span class="log-time">${time}</span>
+        <span class="log-msg">${lat.toFixed(4)}, ${lng.toFixed(4)} — ${(speed || 0).toFixed(1)} km/h</span>
+      `;
+
+      log.insertBefore(entry, log.firstChild);
+      logCount++;
+
+      // Keep log manageable
+      while (log.children.length > 50) {
+        log.removeChild(log.lastChild);
+      }
+    }
+
+    // ============================================
+    // MAP CONTROLS
+    // ============================================
+    function toggleFollow() {
+      followMode = !followMode;
+      document.getElementById('btnFollow').classList.toggle('active', followMode);
+    }
+
+    function toggleTrail() {
+      showTrail = !showTrail;
+      document.getElementById('btnTrail').classList.toggle('active', showTrail);
+      if (showTrail) {
+        trailLine.addTo(map);
+      } else {
+        trailLine.remove();
+      }
+    }
+
+    function clearTrail() {
+      trailCoords.length = 0;
+      trailLine.setLatLngs([]);
+    }
+
+    // ============================================
+    // SSE CONNECTION
+    // ============================================
+    let eventSource = null;
+    let reconnectTimeout = null;
+
+    function connectSSE() {
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      eventSource = new EventSource(`/api/stream?api_key=${API_KEY}`);
+
+      eventSource.onopen = () => {
+        dot.classList.add('connected');
+        text.textContent = 'Connected — Live';
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === 'location') {
+            updatePosition(data);
+          } else if (data.type === 'connected') {
+            console.log('SSE connected');
+          }
+        } catch (e) {
+          console.error('SSE parse error:', e);
+        }
+      };
+
+      eventSource.onerror = () => {
+        dot.classList.remove('connected');
+        text.textContent = 'Disconnected — Retrying...';
+        eventSource.close();
+
+        // Reconnect after 3 seconds
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(connectSSE, 3000);
+      };
+    }
+
+    // ============================================
+    // INITIAL DATA LOAD
+    // ============================================
+    async function loadInitialData() {
+      try {
+        // Load stats
+        const statsRes = await fetch('/api/stats', {
+          headers: { 'X-API-Key': API_KEY }
+        });
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          updateStats(statsData.stats);
+        }
+
+        // Load recent locations for trail
+        const locRes = await fetch('/api/locations?limit=200', {
+          headers: { 'X-API-Key': API_KEY }
+        });
+        if (locRes.ok) {
+          const locData = await locRes.json();
+          if (locData.locations && locData.locations.length > 0) {
+            // Locations come in reverse order (newest first), reverse for trail
+            const locs = locData.locations.reverse();
+
+            for (const loc of locs) {
+              const coord = [loc.lat, loc.lng];
+              trailCoords.push(coord);
+            }
+            trailLine.setLatLngs(trailCoords);
+
+            // Set map to latest position
+            const latest = locs[locs.length - 1];
+            updatePosition({
+              lat: latest.lat,
+              lng: latest.lng,
+              alt: latest.alt,
+              speed: latest.speed,
+              satellites: latest.satellites,
+              timestamp: latest.gps_timestamp || latest.received_at,
+              source: latest.source
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load initial data:', e);
+      }
+    }
+
+    // ============================================
+    // PERIODIC STATS REFRESH
+    // ============================================
+    setInterval(async () => {
+      try {
+        const statsRes = await fetch('/api/stats', {
+          headers: { 'X-API-Key': API_KEY }
+        });
+        if (statsRes.ok) {
+          const data = await statsRes.json();
+          updateStats(data.stats);
+        }
+      } catch (e) {
+        // Silently fail
+      }
+    }, 15000);
+
+    // ============================================
+    // BOOT
+    // ============================================
+    loadInitialData().then(() => {
+      connectSSE();
+    });
+  </script>
+</body>
+</html>
