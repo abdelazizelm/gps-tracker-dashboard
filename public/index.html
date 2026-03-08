@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,19 +10,25 @@
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
 
   <style>
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
     :root {
+      /* Dark Theme (Default) */
       --bg-primary: #0f0f1a;
       --bg-card: rgba(20, 20, 40, 0.85);
       --bg-card-hover: rgba(30, 30, 55, 0.9);
@@ -36,9 +43,36 @@
       --accent-orange: #ff9100;
       --accent-red: #ff4757;
       --accent-purple: #b388ff;
-      --gradient-1: linear-gradient(135deg, #6478ff 0%, #00d4ff 100%);
-      --gradient-2: linear-gradient(135deg, #00e676 0%, #00d4ff 100%);
       --shadow-glow: 0 0 30px rgba(100, 120, 255, 0.1);
+      --card-bg-opacity: 0.6;
+      --chart-grid-color: rgba(255, 255, 255, 0.05);
+      --bg-inner: rgba(15, 15, 30, 0.5);
+      --input-bg: rgba(15, 15, 30, 0.8);
+      --input-scheme: dark;
+    }
+
+    /* Light Theme */
+    :root[data-theme="light"] {
+      --bg-primary: #f4f6f8;
+      --bg-card: rgba(255, 255, 255, 0.9);
+      --bg-card-hover: rgba(255, 255, 255, 1);
+      --border-card: rgba(100, 120, 255, 0.2);
+      --border-glow: rgba(100, 120, 255, 0.4);
+      --text-primary: #1e293b;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-orange: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #8b5cf6;
+      --shadow-glow: 0 4px 20px rgba(100, 120, 255, 0.15);
+      --card-bg-opacity: 0.9;
+      --chart-grid-color: rgba(0, 0, 0, 0.05);
+      --bg-inner: rgba(240, 242, 245, 1);
+      --input-bg: rgba(255, 255, 255, 1);
+      --input-scheme: light;
     }
 
     body {
@@ -115,8 +149,15 @@
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
     }
 
     /* ---- Sidebar ---- */
@@ -142,11 +183,17 @@
 
     /* ---- Cards ---- */
     .card {
-      background: rgba(25, 25, 50, 0.6);
+      background: rgba(var(--bg-card-rgb, 25, 25, 50), var(--card-bg-opacity));
       border: 1px solid var(--border-card);
       border-radius: 14px;
       padding: 18px;
       transition: all 0.3s ease;
+    }
+
+    :root[data-theme="light"] .card {
+      /* override for light theme base color */
+      --bg-card-rgb: 255, 255, 255;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     }
 
     .card:hover {
@@ -171,11 +218,25 @@
       font-size: 18px;
     }
 
-    .card-icon.blue   { background: rgba(100, 120, 255, 0.15); }
-    .card-icon.cyan   { background: rgba(0, 212, 255, 0.15); }
-    .card-icon.green  { background: rgba(0, 230, 118, 0.15); }
-    .card-icon.orange { background: rgba(255, 145, 0, 0.15); }
-    .card-icon.purple { background: rgba(179, 136, 255, 0.15); }
+    .card-icon.blue {
+      background: rgba(100, 120, 255, 0.15);
+    }
+
+    .card-icon.cyan {
+      background: rgba(0, 212, 255, 0.15);
+    }
+
+    .card-icon.green {
+      background: rgba(0, 230, 118, 0.15);
+    }
+
+    .card-icon.orange {
+      background: rgba(255, 145, 0, 0.15);
+    }
+
+    .card-icon.purple {
+      background: rgba(179, 136, 255, 0.15);
+    }
 
     .card-title {
       font-size: 12px;
@@ -211,11 +272,25 @@
       letter-spacing: -0.5px;
     }
 
-    .stat-value.blue   { color: var(--accent-blue); }
-    .stat-value.cyan   { color: var(--accent-cyan); }
-    .stat-value.green  { color: var(--accent-green); }
-    .stat-value.orange { color: var(--accent-orange); }
-    .stat-value.purple { color: var(--accent-purple); }
+    .stat-value.blue {
+      color: var(--accent-blue);
+    }
+
+    .stat-value.cyan {
+      color: var(--accent-cyan);
+    }
+
+    .stat-value.green {
+      color: var(--accent-green);
+    }
+
+    .stat-value.orange {
+      color: var(--accent-orange);
+    }
+
+    .stat-value.purple {
+      color: var(--accent-purple);
+    }
 
     .stat-unit {
       font-size: 12px;
@@ -235,7 +310,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 8px 12px;
-      background: rgba(15, 15, 30, 0.5);
+      background: var(--bg-inner);
       border-radius: 8px;
       font-family: 'Courier New', monospace;
     }
@@ -275,15 +350,22 @@
       align-items: center;
       gap: 8px;
       padding: 6px 10px;
-      background: rgba(15, 15, 30, 0.4);
+      background: var(--bg-inner);
       border-radius: 6px;
       font-size: 12px;
       animation: slideIn 0.3s ease;
     }
 
     @keyframes slideIn {
-      from { transform: translateX(-10px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
+      from {
+        transform: translateX(-10px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
     }
 
     .log-time {
@@ -319,7 +401,11 @@
       height: 100%;
     }
 
-    /* Leaflet overrides for dark theme */
+    /* Leaflet overrides */
+    .leaflet-container {
+      background: var(--bg-primary) !important;
+    }
+
     .leaflet-control-zoom a {
       background: var(--bg-card) !important;
       color: var(--text-primary) !important;
@@ -331,7 +417,7 @@
     }
 
     .leaflet-control-attribution {
-      background: rgba(15, 15, 30, 0.8) !important;
+      background: var(--bg-card) !important;
       color: var(--text-muted) !important;
       font-size: 10px !important;
     }
@@ -393,6 +479,75 @@
       font-size: 14px;
     }
 
+    /* ---- Custom Inputs & Buttons ---- */
+    .ctrl-input {
+      background: var(--input-bg);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      outline: none;
+      width: 100%;
+      color-scheme: var(--input-scheme);
+    }
+
+    .ctrl-input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 10px rgba(100, 120, 255, 0.2);
+    }
+
+    .action-btn {
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.2s;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-btn:hover {
+      background: #4b5af2;
+      box-shadow: var(--shadow-glow);
+    }
+
+    .action-btn.secondary {
+      background: transparent;
+      border: 1px solid var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    .action-btn.secondary:hover {
+      background: rgba(100, 120, 255, 0.1);
+    }
+
+    .layer-select {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.2s ease;
+    }
+
+    .layer-select:hover {
+      border-color: var(--border-glow);
+    }
+
     /* ---- Responsive ---- */
     @media (max-width: 768px) {
       .app {
@@ -412,6 +567,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="app">
 
@@ -422,6 +578,11 @@
         <h1>GPS Tracker <span>Dashboard</span></h1>
       </div>
       <div class="connection-status">
+        <button id="themeToggle" class="action-btn secondary" style="padding: 6px 10px; width: auto; font-size: 14px;"
+          onclick="toggleTheme()" title="Toggle Theme">
+          ☀️
+        </button>
+        <div style="width: 1px; height: 20px; background: var(--border-card); margin: 0 4px;"></div>
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">Connecting...</span>
       </div>
@@ -537,12 +698,48 @@
         </div>
       </div>
 
+      <!-- Historical Explorer Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon cyan">⏳</div>
+          <div class="card-title">Historical Explorer</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px; display: block;">From</label>
+            <input type="datetime-local" id="historyFrom" class="ctrl-input">
+          </div>
+          <div>
+            <label style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px; display: block;">To</label>
+            <input type="datetime-local" id="historyTo" class="ctrl-input">
+          </div>
+          <button class="action-btn" onclick="loadHistoricalData()">🔍 Fetch History</button>
+          <button class="action-btn secondary" onclick="resetToLive()">🟢 Back to Live</button>
+        </div>
+      </div>
+
+      <!-- Telemetry Chart Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon blue">📉</div>
+          <div class="card-title">Live Telemetry</div>
+        </div>
+        <div style="height: 140px; position: relative; width: 100%;">
+          <canvas id="telemetryChart"></canvas>
+        </div>
+      </div>
+
     </aside>
 
     <!-- Map -->
     <div class="map-container">
       <div id="map"></div>
       <div class="map-controls">
+        <select class="layer-select" id="layerSelect" onchange="changeMapLayer()">
+          <option value="dark">🌙 Dark Map</option>
+          <option value="satellite">🛰️ Satellite</option>
+          <option value="street">🗺️ Street</option>
+        </select>
         <button class="map-btn active" id="btnFollow" onclick="toggleFollow()">
           🎯 Follow
         </button>
@@ -551,6 +748,9 @@
         </button>
         <button class="map-btn" id="btnClear" onclick="clearTrail()">
           🗑️ Clear
+        </button>
+        <button class="map-btn" onclick="exportData()">
+          💾 Export
         </button>
       </div>
     </div>
@@ -577,11 +777,37 @@
     }).setView([52.3676, 4.9041], 15);
 
     // Dark tile layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://carto.com/">CARTO</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
       subdomains: 'abcd',
       maxZoom: 20
-    }).addTo(map);
+    });
+
+    // Satellite layer
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      maxZoom: 19
+    });
+
+    // Street layer
+    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    });
+
+    let currentLayer = darkLayer;
+    currentLayer.addTo(map);
+
+    function changeMapLayer() {
+      const selected = document.getElementById('layerSelect').value;
+      if (currentLayer) map.removeLayer(currentLayer);
+
+      if (selected === 'dark') currentLayer = darkLayer;
+      else if (selected === 'satellite') currentLayer = satelliteLayer;
+      else if (selected === 'street') currentLayer = streetLayer;
+
+      currentLayer.addTo(map);
+    }
 
     // Custom marker icon
     const markerIcon = L.divIcon({
@@ -620,7 +846,7 @@
     // ============================================
     // UI UPDATES
     // ============================================
-    function updatePosition(data) {
+    function updatePosition(data, isInitialLoad = false) {
       const { lat, lng, alt, speed, satellites, timestamp, source } = data;
 
       // Update sidebar values
@@ -651,13 +877,21 @@
       }
 
       // Update trail
-      if (showTrail) {
+      if (showTrail && !isInitialLoad) {
         trailCoords.push(latlng);
         trailLine.setLatLngs(trailCoords);
       }
 
       // Add log entry
-      addLogEntry(lat, lng, speed);
+      if (!isInitialLoad) {
+        addLogEntry(lat, lng, speed);
+      }
+
+      // Update Chart
+      if (!isHistoricalView && !isInitialLoad) {
+        const timeLabel = new Date(timestamp || Date.now()).toLocaleTimeString();
+        updateChart(speed, alt, timeLabel);
+      }
     }
 
     function updateStats(stats) {
@@ -725,6 +959,164 @@
     function clearTrail() {
       trailCoords.length = 0;
       trailLine.setLatLngs([]);
+      telemetryChart.data.labels = [];
+      telemetryChart.data.datasets[0].data = [];
+      telemetryChart.data.datasets[1].data = [];
+      telemetryChart.update('none');
+    }
+
+    // ============================================
+    // TELEMETRY CHART
+    // ============================================
+    const ctx = document.getElementById('telemetryChart').getContext('2d');
+    const telemetryChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Speed',
+            data: [],
+            borderColor: '#00e676',
+            backgroundColor: 'rgba(0, 230, 118, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true,
+            yAxisID: 'y',
+            pointRadius: 0,
+            pointHitRadius: 10
+          },
+          {
+            label: 'Altitude',
+            data: [],
+            borderColor: '#6478ff',
+            backgroundColor: 'rgba(100, 120, 255, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true,
+            yAxisID: 'y1',
+            pointRadius: 0,
+            pointHitRadius: 10
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { display: false },
+          y: {
+            type: 'linear',
+            position: 'left',
+            grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color').trim() || 'rgba(255,255,255,0.05)' },
+            title: { display: true, text: 'km/h', color: '#00e676', font: { size: 10 } }
+          },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'm', color: '#6478ff', font: { size: 10 } }
+          }
+        }
+      }
+    });
+
+    function updateChart(speed, altitude, timeLabel) {
+      telemetryChart.data.labels.push(timeLabel);
+      telemetryChart.data.datasets[0].data.push(speed || 0);
+      telemetryChart.data.datasets[1].data.push(altitude || 0);
+
+      // Keep last 30 points visually
+      if (telemetryChart.data.labels.length > 30) {
+        telemetryChart.data.labels.shift();
+        telemetryChart.data.datasets[0].data.shift();
+        telemetryChart.data.datasets[1].data.shift();
+      }
+      telemetryChart.update('none');
+    }
+
+    // ============================================
+    // HISTORICAL DATA & EXPORT
+    // ============================================
+    let isHistoricalView = false;
+
+    async function loadHistoricalData() {
+      const from = document.getElementById('historyFrom').value;
+      const to = document.getElementById('historyTo').value;
+      if (!from || !to) return alert('Please select both From and To dates.');
+
+      try {
+        isHistoricalView = true;
+
+        const fromUTC = new Date(from).toISOString();
+        const toUTC = new Date(to).toISOString();
+
+        const res = await fetch(`/api/locations?from=${encodeURIComponent(fromUTC)}&to=${encodeURIComponent(toUTC)}&limit=1000`, {
+          headers: { 'X-API-Key': API_KEY }
+        });
+
+        if (!res.ok) throw new Error('Fetch failed');
+
+        const data = await res.json();
+        if (data.locations && data.locations.length > 0) {
+          clearTrail();
+          const locs = data.locations.reverse();
+
+          for (const loc of locs) {
+            trailCoords.push([loc.lat, loc.lng]);
+            const timeLabel = new Date(loc.gps_timestamp || loc.received_at).toLocaleTimeString();
+            updateChart(loc.speed, loc.alt, timeLabel);
+          }
+          trailLine.setLatLngs(trailCoords);
+
+          if (trailCoords.length > 0) {
+            map.fitBounds(trailLine.getBounds(), { padding: [50, 50] });
+          }
+
+          followMode = false;
+          showTrail = true;
+          document.getElementById('btnFollow').classList.remove('active');
+          document.getElementById('btnTrail').classList.add('active');
+          trailLine.addTo(map);
+
+        } else {
+          alert('No data found for this range.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error fetching historical data.');
+      }
+    }
+
+    function resetToLive() {
+      isHistoricalView = false;
+      document.getElementById('historyFrom').value = '';
+      document.getElementById('historyTo').value = '';
+      clearTrail();
+      followMode = true;
+      document.getElementById('btnFollow').classList.add('active');
+      loadInitialData(); // Re-fetch the last points
+    }
+
+    function exportData() {
+      if (trailCoords.length === 0) return alert('No trail data to export.');
+
+      let csvContent = "data:text/csv;charset=utf-8,Latitude,Longitude\n";
+      trailCoords.forEach(coord => {
+        csvContent += `${coord[0]},${coord[1]}\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `gps_export_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     // ============================================
@@ -800,6 +1192,8 @@
             for (const loc of locs) {
               const coord = [loc.lat, loc.lng];
               trailCoords.push(coord);
+              const timeLabel = new Date(loc.gps_timestamp || loc.received_at).toLocaleTimeString();
+              updateChart(loc.speed, loc.alt, timeLabel);
             }
             trailLine.setLatLngs(trailCoords);
 
@@ -813,7 +1207,7 @@
               satellites: latest.satellites,
               timestamp: latest.gps_timestamp || latest.received_at,
               source: latest.source
-            });
+            }, true); // true = isInitialLoad
           }
         }
       } catch (e) {
@@ -839,11 +1233,48 @@
     }, 15000);
 
     // ============================================
+    // THEME TOGGLE
+    // ============================================
+    function toggleTheme() {
+      const root = document.documentElement;
+      const btn = document.getElementById('themeToggle');
+
+      if (root.getAttribute('data-theme') === 'light') {
+        root.removeAttribute('data-theme');
+        btn.textContent = '☀️';
+        localStorage.setItem('gps-theme', 'dark');
+      } else {
+        root.setAttribute('data-theme', 'light');
+        btn.textContent = '🌙';
+        localStorage.setItem('gps-theme', 'light');
+      }
+
+      // Update Chart Grid Color
+      if (telemetryChart) {
+        telemetryChart.options.scales.y.grid.color = getComputedStyle(root).getPropertyValue('--chart-grid-color').trim();
+        telemetryChart.update('none');
+      }
+    }
+
+    // Load saved theme
+    if (localStorage.getItem('gps-theme') === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.getElementById('themeToggle').textContent = '🌙';
+    }
+
+    // ============================================
     // BOOT
     // ============================================
     loadInitialData().then(() => {
       connectSSE();
+
+      // Setup initial chart color based on loaded theme
+      if (telemetryChart) {
+        telemetryChart.options.scales.y.grid.color = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color').trim();
+        telemetryChart.update('none');
+      }
     });
   </script>
 </body>
+
 </html>
