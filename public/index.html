@@ -1188,7 +1188,7 @@
         }
 
         // Load recent locations for trail
-        const locRes = await fetch('/api/locations?limit=200', {
+        const locRes = await fetch('/api/locations?limit=1000', {
           headers: { 'X-API-Key': API_KEY }
         });
         if (locRes.ok) {

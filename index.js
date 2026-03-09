@@ -226,7 +226,7 @@ app.post('/api/location', (req, res) => {
 
 // GET - Retrieve location history
 app.get('/api/locations', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit) || 50, 500);
+  const limit = Math.min(parseInt(req.query.limit) || 50, 2000);
   const offset = parseInt(req.query.offset) || 0;
   const from = req.query.from;
   const to = req.query.to;
