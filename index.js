@@ -45,12 +45,12 @@ const insertStmt = db.prepare(`
 const getLocationsStmt = db.prepare(`
   SELECT id, lng, lat, alt, speed, satellites, hdop, source, gps_timestamp, received_at
   FROM locations
-  ORDER BY id DESC
+  ORDER BY gps_timestamp DESC, id DESC
   LIMIT @limit OFFSET @offset
 `);
 
 const getLatestStmt = db.prepare(`
-  SELECT * FROM locations ORDER BY id DESC LIMIT 1
+  SELECT * FROM locations ORDER BY gps_timestamp DESC, id DESC LIMIT 1
 `);
 
 const getCountStmt = db.prepare(`
@@ -73,7 +73,7 @@ const getLocationsByTimeRange = db.prepare(`
   SELECT id, lng, lat, alt, speed, satellites, hdop, source, gps_timestamp, received_at
   FROM locations
   WHERE received_at BETWEEN @from AND @to
-  ORDER BY id DESC
+  ORDER BY gps_timestamp DESC, id DESC
   LIMIT @limit OFFSET @offset
 `);
 

@@ -832,7 +832,7 @@
 
     let currentMarker = null;
     let trailLine = null;
-    const trailCoords = [];
+    const trailCoords = []; // Array of {lat, lng, ts} objects for chronological sorting
 
     // Initialize trail polyline
     trailLine = L.polyline([], {
@@ -878,8 +878,15 @@
 
       // Update trail
       if (showTrail && !isInitialLoad) {
-        trailCoords.push(latlng);
-        trailLine.setLatLngs(trailCoords);
+        const ts = timestamp ? new Date(timestamp).getTime() : Date.now();
+        trailCoords.push({ lat, lng, ts });
+
+        // If this point is older than the last one, re-sort by timestamp
+        if (trailCoords.length > 1 && ts < trailCoords[trailCoords.length - 2].ts) {
+          trailCoords.sort((a, b) => a.ts - b.ts);
+        }
+
+        trailLine.setLatLngs(trailCoords.map(p => [p.lat, p.lng]));
       }
 
       // Add log entry
@@ -1067,14 +1074,15 @@
           const locs = data.locations.reverse();
 
           for (const loc of locs) {
-            trailCoords.push([loc.lat, loc.lng]);
+            const ts = new Date(loc.gps_timestamp || loc.received_at).getTime();
+            trailCoords.push({ lat: loc.lat, lng: loc.lng, ts });
             const timeLabel = new Date(loc.gps_timestamp || loc.received_at).toLocaleTimeString();
             updateChart(loc.speed, loc.alt, timeLabel);
           }
-          trailLine.setLatLngs(trailCoords);
+          trailLine.setLatLngs(trailCoords.map(p => [p.lat, p.lng]));
 
           if (trailCoords.length > 0) {
-            map.fitBounds(trailLine.getBounds(), { padding: [50, 50] });
+            map.fitBounds(L.latLngBounds(trailCoords.map(p => [p.lat, p.lng])), { padding: [50, 50] });
           }
 
           followMode = false;
@@ -1106,8 +1114,8 @@
       if (trailCoords.length === 0) return alert('No trail data to export.');
 
       let csvContent = "data:text/csv;charset=utf-8,Latitude,Longitude\n";
-      trailCoords.forEach(coord => {
-        csvContent += `${coord[0]},${coord[1]}\n`;
+      trailCoords.forEach(p => {
+        csvContent += `${p.lat},${p.lng}\n`;
       });
 
       const encodedUri = encodeURI(csvContent);
@@ -1190,12 +1198,12 @@
             const locs = locData.locations.reverse();
 
             for (const loc of locs) {
-              const coord = [loc.lat, loc.lng];
-              trailCoords.push(coord);
+              const ts = new Date(loc.gps_timestamp || loc.received_at).getTime();
+              trailCoords.push({ lat: loc.lat, lng: loc.lng, ts });
               const timeLabel = new Date(loc.gps_timestamp || loc.received_at).toLocaleTimeString();
               updateChart(loc.speed, loc.alt, timeLabel);
             }
-            trailLine.setLatLngs(trailCoords);
+            trailLine.setLatLngs(trailCoords.map(p => [p.lat, p.lng]));
 
             // Set map to latest position
             const latest = locs[locs.length - 1];
